@@ -412,7 +412,7 @@ Get_query_solved = create_react_agent(
 # brief = Get_query_solved.invoke({"messages": [HumanMessage(content= f"User query: {query}" )]})
 
 # print(brief['messages'][-1].content)
-    
+
 from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import JSONResponse
@@ -452,5 +452,12 @@ async def run_query(request: QueryRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+app = FastAPI()
+
+@app.get("/")
+def root():
+    return {"message": "Hello from FastAPI on Render"}
+
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=7860, reload=True)
+    port = int(os.environ.get("PORT", 7860))  # 7860 is local default
+    uvicorn.run(app, host="0.0.0.0", port=port)
