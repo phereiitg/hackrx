@@ -344,22 +344,22 @@ def document_retriever(query: str) -> str:
     return a
 
 # Usage
-if __name__ == "__main__":
-    PDF_URL = "https://hackrx.in/policies/CHOTGDP23004V012223.pdf"
+# if __name__ == "__main__":
+#     PDF_URL = "https://hackrx.in/policies/CHOTGDP23004V012223.pdf"
 
-    # Lightning ingestion
-    lightning_pipeline.ingest_lightning_fast(PDF_URL)
+#     # Lightning ingestion
+#     lightning_pipeline.ingest_lightning_fast(PDF_URL)
 
-    # Lightning searches
-    print("\n" + "=" * 60)
-    print("⚡ LIGHTNING SEARCH TEST:")
-    result = lightning_pipeline.search("premium amount age 25", k=3)
-    print(result)
-
-
+#     # Lightning searches
+#     print("\n" + "=" * 60)
+#     print("⚡ LIGHTNING SEARCH TEST:")
+#     result = lightning_pipeline.search("premium amount age 25", k=3)
+#     print(result)
 
 
-    from langgraph.prebuilt import create_react_agent
+
+
+from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 query_ans_prompt = """
@@ -407,8 +407,50 @@ Get_query_solved = create_react_agent(
     tools = [document_retriever],
     prompt= query_ans_prompt
 )
-query = input('what is your query? ')
+# query = input('what is your query? ')
 
-brief = Get_query_solved.invoke({"messages": [HumanMessage(content= f"User query: {query}" )]})
+# brief = Get_query_solved.invoke({"messages": [HumanMessage(content= f"User query: {query}" )]})
 
-print(brief['messages'][-1].content)
+# print(brief['messages'][-1].content)
+    
+from fastapi import FastAPI, Request, HTTPException
+from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+import uvicorn
+
+app = FastAPI()
+
+class QueryRequest(BaseModel):
+    documents: str
+    questions: list
+
+@app.post("/hackrx/run")
+async def run_query(request: QueryRequest):
+    try:
+        # Step 1: Ingest the document
+        lightning_pipeline.ingest_lightning_fast(request.documents)
+
+        # Step 2: Answer each question
+        answers = []
+        for question in request.questions:
+            result = Get_query_solved.invoke({
+                "messages": [HumanMessage(content=f"User query: {question}")]
+            })
+            message = result['messages'][-1].content
+
+            # Optional: Extract only the 'answer' field if the LLM returns JSON
+            try:
+                import json
+                parsed = json.loads(message)
+                answers.append(parsed.get('answer', message))
+            except:
+                answers.append(message)
+
+        return JSONResponse(content={"answers": answers})
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=7860, reload=True)
