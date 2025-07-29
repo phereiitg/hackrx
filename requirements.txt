@@ -1,0 +1,10 @@
+requests
+PyMuPDF
+numpy
+sentence-transformers
+langchain
+langgraph
+langchain-google-genai
+uvicorn
+fastapi
+pydantic
